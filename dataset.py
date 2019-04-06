@@ -29,7 +29,7 @@ class KBDataset(object):
 
     def __repr__(self):
         return ("%s | ent:%d | rel:%d | train:%d | valid:%d | test:%d" %
-                (self.name.lower(), self.nent, self.nrel,
+                (self.name, self.nent, self.nrel,
                  len(self.train), len(self.valid), len(self.test)))
 
     def load_file(self, filename):
@@ -38,17 +38,15 @@ class KBDataset(object):
             triples_ = np.zeros(temp.size, dtype=np.int32)
             for i in range(0, temp.size // 3):
                 if temp[3 * i] not in self.ent_id:
-                    self.nent += 1
                     self.ent_id[temp[3 * i]] = self.nent
-                triples_[3 * i] = self.ent_id[temp[3 * i]]
-
-                if temp[3 * i + 2] not in self.ent_id:
                     self.nent += 1
+                triples_[3 * i] = self.ent_id[temp[3 * i]]
+                if temp[3 * i + 2] not in self.ent_id:
                     self.ent_id[temp[3 * i + 2]] = self.nent
+                    self.nent += 1
                 triples_[3 * i + 2] = self.ent_id[temp[3 * i + 2]]
-
                 if temp[3 * i + 1] not in self.rel_id:
-                    self.nrel += 1
                     self.rel_id[temp[3 * i + 1]] = self.nrel
+                    self.nrel += 1
                 triples_[3 * i + 1] = self.rel_id[temp[3 * i + 1]]
         return triples_.reshape((-1, 3))

@@ -27,9 +27,11 @@ class BasicModel(object):
         pos_score = self.scoring_func(pos_he, pos_re, pos_te)
         neg_score = self.scoring_func(neg_he, neg_re, neg_te)
 
+        # Margin loss
         self.loss = tf.reduce_sum(
             tf.maximum(tf.subtract(tf.add(pos_score, self.config.margin), neg_score), 0.))
 
+        # Testing
         self.r_score = self.scoring_func(pos_he, pos_re, self.emb_ent)
         self.l_score = self.scoring_func(self.emb_ent, pos_re, pos_te)
 
