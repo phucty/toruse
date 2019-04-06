@@ -8,7 +8,7 @@ from models import TorusE, TransE
 import argparse
 
 
-def get_parameters(reproduce=None, gpu=-1):
+def get_parameters(reproduce=None, gpu=-1, restore=-1):
     parser = argparse.ArgumentParser()
     parser.add_argument('-reproduce', default="transe-fb15k", type=str, help="rerun the optimal setting {toruse-fb15k, toruse-wn18, transe-fb15k, transe-wn18}")
     parser.add_argument('-restore', default=-1, type=int, help="load pre-train embedding at epoch i, if not loading, i = -1")
@@ -73,6 +73,8 @@ def get_parameters(reproduce=None, gpu=-1):
         args.margin = 0.5
         args.reg = "l2"
 
+    if restore > -1:
+        args.restore = restore
     if int(args.restore) >= 0:
         restore_dir = "checkpoints/%s/%d/%s.ckpt" % (args.data, int(args.restore), args.model)
         args.restore = os.path.join(os.getcwd(), restore_dir)
@@ -82,6 +84,7 @@ def get_parameters(reproduce=None, gpu=-1):
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+
     return args
 
 
@@ -92,7 +95,7 @@ def main(_):
     random.seed(a=1, version=2)
 
     # Load configuration
-    config = get_parameters(reproduce="toruse-wn18", gpu=1)
+    config = get_parameters(reproduce="toruse-fb15k", gpu=1)
     print(config)
 
     # Load Dataset
@@ -110,16 +113,15 @@ def main(_):
     else:
         model = TorusE(config, data.nent, data.nrel)
     optimizer = tf.train.GradientDescentOptimizer(config.lr)
-    # global_step = tf.Variable(0, name="gb", trainable=False)
     cal_gradient = optimizer.compute_gradients(model.loss)
-    train_opt = optimizer.apply_gradients(cal_gradient)
+    train_worker = optimizer.apply_gradients(cal_gradient)
 
     # Config Saver and Session
     saver = tf.train.Saver(max_to_keep=100)
     sess.run(tf.global_variables_initializer())
 
     # Training
-    base.train(data, model, train_opt, config, sess, saver)
+    base.train(data, model, train_worker, config, sess, saver)
 
     # Testing
     base.test(data, model, sess)

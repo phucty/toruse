@@ -21,11 +21,13 @@ class KBDataset(object):
 
         self.rel_h = defaultdict(set)
         self.rel_t = defaultdict(set)
-        self.train_triples = defaultdict(set)
+        self.train_triples_t = defaultdict(set)
+        self.train_triples_h = defaultdict(set)
         for triple in self.train:
             self.rel_h[triple[1]].add(triple[0])
             self.rel_t[triple[1]].add(triple[2])
-            self.train_triples[(triple[0], triple[1])].add(triple[2])
+            self.train_triples_t[(triple[0], triple[1])].add(triple[2])
+            self.train_triples_h[(triple[1], triple[2])].add(triple[0])
 
     def __repr__(self):
         return ("%s | ent:%d | rel:%d | train:%d | valid:%d | test:%d" %

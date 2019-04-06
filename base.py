@@ -26,11 +26,13 @@ def negative_sampling(data, i_batch, batch_size):
         bern = len(data.rel_h[r]) / (len(data.rel_t[r]) + len(data.rel_h[r]))
         if random.random() < bern:
             n_triple[2] = random.randrange(data.nent)
-            while n_triple[2] in data.train_triples[(n_triple[0], r)]:
+            check_t = data.train_triples_t[(n_triple[0], r)]
+            while n_triple[2] in check_t:
                 n_triple[2] = random.randrange(data.nent)
         else:
             n_triple[0] = random.randrange(data.nent)
-            while n_triple[2] in data.train_triples[(n_triple[0], r)]:
+            check_h = data.train_triples_h[(r, n_triple[2])]
+            while n_triple[0] in check_h:
                 n_triple[0] = random.randrange(data.nent)
     return pos_batch, neg_batch
 
@@ -100,11 +102,8 @@ def train(data, model, train_opt, config, sess, saver):
 def valid(data, model, sess):
     mrr = 0.
     valid_rows, _ = data.valid.shape
-    # valid_rows = 10
-
-    time_list = []
+    start = time()
     for i in range(valid_rows):
-        start = time()
         temp_h = data.valid[i, 0]
         temp_r = data.valid[i, 1]
         temp_t = data.valid[i, 2]
@@ -132,8 +131,8 @@ def valid(data, model, sess):
                 break
             if len(temp_rt) == 0 or res_score[j] not in temp_rt:
                 rank += 1
-        time_list.append(time() - start)
-        ul.print_progress(i, valid_rows, "Valid - %.2fs/triple" % np.mean(time_list))
+        time_avg = (time() - start) / (i + 1)
+        ul.print_progress(i, valid_rows, "Valid - %.5fs/triple" % time_avg)
     mrr = mrr / valid_rows / 2.
     print("\tMRR: %f" % mrr)
     return mrr
@@ -145,35 +144,25 @@ def test(data, model, sess):
     res_fl = LPResult()
     res_fr = LPResult()
     test_rows, test_cols = data.test.shape
-    time_list = []
+    start = time()
     for i in range(test_rows):
-        start = time()
         temp_h = data.test[i, 0]
         temp_r = data.test[i, 1]
         temp_t = data.test[i, 2]
-
         temp_hr = data.triples_t[(temp_h, temp_r)]
         res_score = sess.run(model.r_score, feed_dict={model.pos_h: [temp_h],
-                                                       model.pos_r: [temp_r]})
-        res_score = np.argsort(res_score)
+                                                       model.pos_r: [temp_r]}).argsort()
         rank = 0.
         for j in range(data.nent):
             if res_score[j] == temp_t:
-                if rank < 10:
-                    res_fr.h10 += 1
-                if rank < 3:
-                    res_fr.h3 += 1
-                if rank < 1:
-                    res_fr.h1 += 1
+                if rank < 10: res_fr.h10 += 1
+                if rank < 3: res_fr.h3 += 1
+                if rank < 1: res_fr.h1 += 1
                 res_fr.mr += rank + 1
                 res_fr.mrr += 1 / (rank + 1)
-
-                if j < 10:
-                    res_r.h10 += 1
-                if j < 3:
-                    res_r.h3 += 1
-                if j < 1:
-                    res_r.h1 += 1
+                if j < 10: res_r.h10 += 1
+                if j < 3: res_r.h3 += 1
+                if j < 1: res_r.h1 += 1
                 res_r.mr += j + 1
                 res_r.mrr += 1 / (j + 1)
                 break
@@ -181,34 +170,26 @@ def test(data, model, sess):
                 rank += 1
 
         res_score = sess.run(model.l_score, feed_dict={model.pos_r: [temp_r],
-                                                       model.pos_t: [temp_t]})
-        res_score = np.argsort(res_score)
+                                                       model.pos_t: [temp_t]}).argsort()
         temp_rt = data.triples_h[(temp_r, temp_t)]
         rank = 0.
         for j in range(data.nent):
             if res_score[j] == temp_h:
-                if rank < 10:
-                    res_fl.h10 += 1
-                if rank < 3:
-                    res_fl.h3 += 1
-                if rank < 1:
-                    res_fl.h1 += 1
+                if rank < 10: res_fl.h10 += 1
+                if rank < 3: res_fl.h3 += 1
+                if rank < 1: res_fl.h1 += 1
                 res_fl.mr += rank + 1
                 res_fl.mrr += 1 / (rank + 1)
-
-                if j < 10:
-                    res_l.h10 += 1
-                if j < 3:
-                    res_l.h3 += 1
-                if j < 1:
-                    res_l.h1 += 1
+                if j < 10: res_l.h10 += 1
+                if j < 3: res_l.h3 += 1
+                if j < 1: res_l.h1 += 1
                 res_l.mr += j + 1
                 res_l.mrr += 1 / (j + 1)
                 break
             if len(temp_rt) == 0 or res_score[j] not in temp_rt:
                 rank += 1
-        time_list.append(time() - start)
-        ul.print_progress(i, test_rows, "Test - %.2fs/triple" % np.mean(time_list))
+        time_avg = (time() - start) / (i + 1)
+        ul.print_progress(i, test_rows, "Test - %.5fs/triple" % time_avg)
 
     r_mrr = (res_fl.mrr + res_fr.mrr) / test_rows / 2
     r_mr = (res_fl.mr + res_fr.mr) / test_rows / 2
