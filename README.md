@@ -1,5 +1,7 @@
 # TorusE
 Reimplemetation TorusE paper
+Orginal Repository from Takuma-san. [TorusE](https://github.com/TakumaE/TorusE) 
+
 ```
 @inproceedings{TorusE,
   author    = {Takuma Ebisu and
